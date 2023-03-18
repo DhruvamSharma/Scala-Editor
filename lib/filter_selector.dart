@@ -98,7 +98,7 @@ class _FilterSelectorState extends State<FilterSelector> {
               return Transform.scale(
                 scale: itemScale,
                 child: Opacity(
-                  opacity: opacity ?? 0,
+                  opacity: opacity,
                   child: FilterItem(
                     color: widget.filters[position],
                     onFilterSelected: () => _onFilterTapped,

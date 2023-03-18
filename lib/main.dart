@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:scala_editor/custom_image_picker.dart';
 import 'package:scala_editor/filter_selector.dart';
 
 void main() {
@@ -42,8 +45,14 @@ class MyHomePage extends StatelessWidget {
     _filterColor.value = value;
   }
 
-  static const String _imageLink =
-      'https://docs.flutter.dev/cookbook/img-files/effects/instagram-buttons/millenial-dude.jpg';
+  // TODO 2: Add a variable for image that we are going to select
+  // and assign null for initialisation
+  final _image = ValueNotifier<XFile?>(null);
+
+  // TODO 6: Create a function to receive the selected file and change the state
+  void _onImageSelected(XFile file) {
+    _image.value = file;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,24 +61,7 @@ class MyHomePage extends StatelessWidget {
       body: Stack(
         children: [
           Center(
-            child: Container(
-              height: MediaQuery.of(context).size.height / 2,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(
-                    _imageLink,
-                  ),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 40.0, sigmaY: 40.0),
-                child: Container(
-                  decoration:
-                      BoxDecoration(color: _filterColor.value.withOpacity(0.0)),
-                ),
-              ),
-            ),
+            child: _buildBackground(MediaQuery.of(context).size.height / 2),
           ),
           Positioned(
             left: 0,
@@ -96,28 +88,81 @@ class MyHomePage extends StatelessWidget {
             bottom: 0,
             right: 0,
             left: 0,
-            child: FilterSelector(
-              filters: _filters,
-              onFilterChange: (Color color) {
-                _onFilterChanged(color);
-              },
-            ),
+            child: _buildFilters(),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildFilters() {
+    return ValueListenableBuilder(
+      valueListenable: _image,
+      builder: (context, xFile, child) {
+        if (xFile == null) {
+          return const SizedBox();
+        } else {
+          return FilterSelector(
+            filters: _filters,
+            onFilterChange: (Color color) {
+              _onFilterChanged(color);
+            },
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildBackground(double height) {
+    return ValueListenableBuilder(
+      valueListenable: _image,
+      builder: (_, image, child) {
+        return Container(
+          height: height,
+          decoration: BoxDecoration(
+            image: _image.value != null
+                ? DecorationImage(
+              image: FileImage(
+                File(_image.value!.path),
+              ),
+              fit: BoxFit.cover,
+            )
+                : null,
+          ),
+          child: child,
+        );
+      },
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 40.0, sigmaY: 40.0),
+        child: Container(
+          decoration: BoxDecoration(color: _filterColor.value.withOpacity(0.0)),
+        ),
+      ),
+    );
+  }
+
+  // TODO 4: reconfigure the function to take account of _image
   Widget _buildPhotoWithFilter() {
     return ValueListenableBuilder(
-      valueListenable: _filterColor,
-      builder: (context, color, child) {
-        return Image.network(
-          _imageLink,
-          color: color.withOpacity(0.5),
-          colorBlendMode: BlendMode.color,
-          fit: BoxFit.cover,
-        );
+      valueListenable: _image,
+      builder: (_, xFile, child) {
+        if (xFile == null) {
+          return CustomImagePicker(
+            onImagePicked: _onImageSelected,
+          );
+        } else {
+          return ValueListenableBuilder(
+            valueListenable: _filterColor,
+            builder: (context, color, child) {
+              return Image.file(
+                File(xFile.path),
+                color: color.withOpacity(0.5),
+                colorBlendMode: BlendMode.color,
+                fit: BoxFit.cover,
+              );
+            },
+          );
+        }
       },
     );
   }
